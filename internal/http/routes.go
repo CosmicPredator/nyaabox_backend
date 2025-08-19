@@ -1,7 +1,8 @@
 package http
 
 import (
-	"fmt"
+	"cosmic/nyaabox/internal/db"
+	"cosmic/nyaabox/internal/storage"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
@@ -9,6 +10,7 @@ import (
 
 type Routes struct {
 	app *fiber.App
+	dbHandle *db.DbHandler
 }
 
 func (r *Routes) apiIndexHandler(ctx *fiber.Ctx) error {
@@ -25,12 +27,9 @@ func (r *Routes) uploadHandler(ctx *fiber.Ctx) error {
 	var fileNameArr []string = make([]string, 0)
 	
 	for _, file := range files {
-		log.Debugf("Processing: %s | %s | %s", file.Filename, file.Size, file.Header["Content-Type"][0])
-		err := ctx.SaveFile(file, fmt.Sprintf("./%s", file.Filename))
-		if err != nil {
-			return err
-		}
-		fileNameArr = append(fileNameArr, fmt.Sprintf("%s/%s", ctx.BaseURL(), file.Filename))
+		fileName, err := storage.SaveToDisk(ctx, *r.dbHandle, file)
+		if err != nil { return err }
+		fileNameArr = append(fileNameArr, fileName)
 	}
 	return ctx.Status(fiber.StatusOK).JSON(newUploadSuccessResponse(fileNameArr))
 }
@@ -43,8 +42,9 @@ func (r *Routes) RegisterRoutes() {
 	log.Debug("registered route: '/api/upload'")
 }
 
-func NewRouteHandler(app *fiber.App) *Routes {
+func NewRouteHandler(app *fiber.App, dbHandle *db.DbHandler) *Routes {
 	return &Routes{
 		app: app,
+		dbHandle: dbHandle,
 	}
 }

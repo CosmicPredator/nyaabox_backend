@@ -3,7 +3,6 @@ package db
 import (
 	"cosmic/nyaabox/internal/config"
 	"database/sql"
-	"fmt"
 	"time"
 
 	"github.com/gofiber/fiber/v2/log"
@@ -58,11 +57,11 @@ func (db *DbHandler) GetEntriesByExpiredAt(expiresAt time.Time) ([]*FileEntry, e
 	defer rows.Close()
 	
 	for rows.Next() {
-		var f FileEntry
-		if err != rows.Scan(&f.FileId, &f.FileName, &f.FilePath) {
+		f := new(FileEntry)
+		if err != rows.Scan(f.FileId, f.FileName, f.FilePath) {
 			return nil, err
 		}
-		fileEntries = append(fileEntries, &f)
+		fileEntries = append(fileEntries, f)
 	}
 	
 	return fileEntries, nil
@@ -85,14 +84,13 @@ func (db *DbHandler) Close() {
 
 func NewDbHandler() (*DbHandler, error) {
 	var dbPath string
-	dbPath, err := config.GetEnv("NYAABOX_DB_PATH")
+	dbPath, err := config.GetEnv("NB_DB_PATH")
 	if err != nil {
-		log.Warn("'NYAABOX_DB_PATH' not provided. defaulting to './nyaabox.db'")
-		dbPath = "./nyaabox.db"
+		log.Warn("'NB_DB_PATH' not provided. defaulting to './nyaabox.db'")
+		dbPath = "nyaabox.db"
 	}
 
 	log.Debug("trying to initialize DB")
-	dbPath = fmt.Sprintf("file:%s", dbPath)
 	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		return nil, err
