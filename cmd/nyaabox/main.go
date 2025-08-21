@@ -42,7 +42,7 @@ func main() {
 	
 	routeManager := http.NewRouteHandler(app, dbHandle)
 	routeManager.RegisterRoutes()
-	
+
 	port, err := config.GetEnv("NB_PORT")
 	if err != nil {
 		log.Error(err.Error())
