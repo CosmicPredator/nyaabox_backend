@@ -34,12 +34,30 @@ func (r *Routes) uploadHandler(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusOK).JSON(newUploadSuccessResponse(fileNameArr))
 }
 
+func (r *Routes) getFileHandler(ctx *fiber.Ctx) error {
+	fileId := ctx.Params("file_id")
+	file, err := storage.GetFile(fileId, r.dbHandle)
+	if err != nil {
+		return err
+	}
+	return ctx.Status(fiber.StatusOK).SendFile(file.FilePath)
+}
+
+func (r *Routes) handleBadApiAttempt(ctx *fiber.Ctx) error {
+	return ctx.Status(fiber.StatusOK).SendFile("surprise.jpg")
+}
+
 func (r *Routes) RegisterRoutes() {
+	r.app.Get("/file/:file_id", r.getFileHandler)
+	log.Debug("registered route: '/:file_id'")
+	
 	r.app.Get("/api", r.apiIndexHandler)
 	log.Debug("registered route: '/api'")
 	
-	r.app.Post("/api/upload", r.uploadHandler)
+	r.app.Post("/api/uploadx", r.uploadHandler)
 	log.Debug("registered route: '/api/upload'")
+	
+	r.app.Get("/api/*", r.handleBadApiAttempt)
 }
 
 func NewRouteHandler(app *fiber.App, dbHandle *db.DbHandler) *Routes {

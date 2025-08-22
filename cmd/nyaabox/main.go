@@ -1,11 +1,15 @@
 package main
 
 import (
+	"context"
 	"cosmic/nyaabox/internal/config"
+	"cosmic/nyaabox/internal/cron"
 	"cosmic/nyaabox/internal/db"
 	"cosmic/nyaabox/internal/http"
 	"cosmic/nyaabox/internal/storage"
 	"os"
+	"strconv"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
@@ -24,7 +28,13 @@ func main() {
 	app := fiber.New(fiber.Config{
 		StreamRequestBody: true,
 		BodyLimit: 2 * 1024 * 1024 * 1024, // 2GB
+		ErrorHandler: func (ctx *fiber.Ctx, err error) error {
+			return ctx.Status(fiber.StatusNotFound).JSON(
+				http.NewErrorResponse(err.Error()),
+			)
+		},
 	})
+	
 	log.Infof("Nyaabox backend version %s", version)
 	
 	err := config.LoadEnv()
@@ -39,6 +49,15 @@ func main() {
 	
 	err = dbHandle.Init()
 	checkErr(err)
+	
+	interval, err := config.GetEnv("NB_CRON_INTERVAL")
+	if err != nil {
+		interval = "30"
+	}
+	intervalInt, _ := strconv.Atoi(interval)
+	
+	cron := cron.NewCronJob(context.Background(), time.Duration(intervalInt)*time.Second, dbHandle)
+	go cron.RunCronJob()
 	
 	routeManager := http.NewRouteHandler(app, dbHandle)
 	routeManager.RegisterRoutes()

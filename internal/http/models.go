@@ -14,7 +14,6 @@ func newHealthResponse(status string) *healthResponse {
 	}
 }
 
-
 type uploadSuccessResponse struct {
 	healthResponse
 	Files []string `json:"files"`
@@ -27,5 +26,20 @@ func newUploadSuccessResponse(files []string) *uploadSuccessResponse {
 			Stamp: time.Now(),
 		},
 		Files: files,
+	}
+}
+
+type ErrorResponse struct {
+	healthResponse
+	Message string `json:"message"`
+}
+
+func NewErrorResponse(message string) *ErrorResponse {
+	return &ErrorResponse{
+		healthResponse: healthResponse{
+			Status: "Not Ok",
+			Stamp: time.Now(),
+		},
+		Message: message,
 	}
 }

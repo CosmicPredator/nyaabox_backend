@@ -58,7 +58,7 @@ func (db *DbHandler) GetEntriesByExpiredAt(expiresAt time.Time) ([]*FileEntry, e
 	
 	for rows.Next() {
 		f := new(FileEntry)
-		if err != rows.Scan(f.FileId, f.FileName, f.FilePath) {
+		if err != rows.Scan(&f.FileId, &f.FileName, &f.FilePath) {
 			return nil, err
 		}
 		fileEntries = append(fileEntries, f)
