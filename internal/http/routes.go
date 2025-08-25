@@ -3,6 +3,8 @@ package http
 import (
 	"cosmic/nyaabox/internal/db"
 	"cosmic/nyaabox/internal/storage"
+	"mime"
+	"path/filepath"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
@@ -37,10 +39,20 @@ func (r *Routes) uploadHandler(ctx *fiber.Ctx) error {
 func (r *Routes) getFileHandler(ctx *fiber.Ctx) error {
 	fileId := ctx.Params("file_id")
 	file, err := storage.GetFile(fileId, r.dbHandle)
+	ext := filepath.Ext(file.FileName)
+	mimeType := mime.TypeByExtension(ext)
+	if mimeType == "" {
+		mimeType = "application/octet-stream"
+	}
 	if err != nil {
 		return err
 	}
-	return ctx.Status(fiber.StatusOK).SendFile(file.FilePath)
+	ctx.Set("Content-Type", mimeType)
+	ctx.Set("Access-Control-Allow-Methods", "GET, HEAD")
+	ctx.Set("Cache-Control", "public, max-age=31536000")
+	ctx.Set("Access-Control-Allow-Origin", "*")
+	
+	return ctx.Status(fiber.StatusOK).SendFile(file.FilePath, true)
 }
 
 func (r *Routes) handleBadApiAttempt(ctx *fiber.Ctx) error {
