@@ -1,10 +1,9 @@
 package http
 
 import (
+	"cosmic/nyaabox/internal/config"
 	"cosmic/nyaabox/internal/db"
 	"cosmic/nyaabox/internal/storage"
-	"mime"
-	"path/filepath"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
@@ -36,32 +35,20 @@ func (r *Routes) uploadHandler(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusOK).JSON(newUploadSuccessResponse(fileNameArr))
 }
 
-func (r *Routes) getFileHandler(ctx *fiber.Ctx) error {
-	fileId := ctx.Params("file_id")
-	file, err := storage.GetFile(fileId, r.dbHandle)
-	ext := filepath.Ext(file.FileName)
-	mimeType := mime.TypeByExtension(ext)
-	if mimeType == "" {
-		mimeType = "application/octet-stream"
-	}
-	if err != nil {
-		return err
-	}
-	ctx.Set("Content-Type", mimeType)
-	ctx.Set("Access-Control-Allow-Methods", "GET, HEAD")
-	ctx.Set("Cache-Control", "public, max-age=31536000")
-	ctx.Set("Access-Control-Allow-Origin", "*")
-	
-	return ctx.Status(fiber.StatusOK).SendFile(file.FilePath, true)
-}
-
 func (r *Routes) handleBadApiAttempt(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusOK).SendFile("surprise.jpg")
 }
 
-func (r *Routes) RegisterRoutes() {
-	r.app.Get("/file/:file_id", r.getFileHandler)
-	log.Debug("registered route: '/:file_id'")
+func (r *Routes) RegisterRoutes() error {
+	savePath, err := config.GetEnv("NB_SAVE_PATH")
+	if err != nil {
+		return err
+	}
+
+	r.app.Static("/file", savePath, fiber.Static{
+		ByteRange: true,
+		Compress: true,
+	})
 	
 	r.app.Get("/api", r.apiIndexHandler)
 	log.Debug("registered route: '/api'")
@@ -70,6 +57,8 @@ func (r *Routes) RegisterRoutes() {
 	log.Debug("registered route: '/api/upload'")
 	
 	r.app.Get("/api/*", r.handleBadApiAttempt)
+
+	return nil
 }
 
 func NewRouteHandler(app *fiber.App, dbHandle *db.DbHandler) *Routes {
